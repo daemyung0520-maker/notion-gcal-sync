@@ -1,7 +1,7 @@
 import { fetchKoreanHolidays } from './googleHolidays.js';
 import { fetchExistingHolidayPages, createHolidayPage, archivePage } from './notion.js';
 
-const IMPORT_MONTHS_AHEAD = 12;
+const IMPORT_MONTHS_AHEAD = 18;
 
 // 구글 "대한민국의 휴일" 캘린더에는 실제 법정 공휴일이 아닌 기념일도 섞여
 // 있다 (국군의날, 크리스마스 이브 등). 구글 캘린더 화면에 뜨는지 여부로는
