@@ -1,0 +1,31 @@
+name: Notion -> Google Calendar Sync
+
+on:
+  schedule:
+    # 10분마다 실행 (GitHub 스케줄은 정확히 그 분에 안 돌 수 있고 다소 지연될 수 있음)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run sync
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          CALENDAR_ID_WORK: ${{ secrets.CALENDAR_ID_WORK }}
+          CALENDAR_ID_PERSONAL: ${{ secrets.CALENDAR_ID_PERSONAL }}
+          CALENDAR_ID_DATE: ${{ secrets.CALENDAR_ID_DATE }}
+          SYNC_CUTOFF_DATE: ${{ secrets.SYNC_CUTOFF_DATE }}

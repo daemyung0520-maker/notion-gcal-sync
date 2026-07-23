@@ -1,0 +1,19 @@
+{
+  "name": "notion-gcal-sync",
+  "version": "1.0.0",
+  "description": "노션 '대명 창고' 일정을 구글 캘린더로 동기화",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "sync": "node src/index.js",
+    "sync:dry-run": "node src/index.js --dry-run",
+    "get-google-token": "node scripts/get-google-token.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "googleapis": "^144.0.0"
+  }
+}
