@@ -3,6 +3,21 @@ import { fetchExistingHolidayPages, createHolidayPage, archivePage } from './not
 
 const IMPORT_MONTHS_AHEAD = 12;
 
+// 구글 "대한민국의 휴일" 캘린더에는 실제 법정 공휴일이 아닌 기념일도 섞여
+// 있다 (국군의날, 크리스마스 이브 등). 구글 캘린더 화면에 뜨는지 여부로는
+// 구분이 안 돼서(구글 내부 로직이라 API로 알 수 없음 — 확인해봄), 실제로
+// 법정 공휴일이 아닌 게 확실한 것들만 이름으로 직접 제외한다. 이 날짜들은
+// 법으로 고정이라 매년 바뀔 일이 거의 없다. 나중에 법이 바뀌면 이 목록만
+// 수정하면 된다.
+const NON_STATUTORY_TITLES = new Set([
+  '국군의날',
+  '크리스마스 이브',
+  '섣달 그믐날',
+  '식목일',
+  '어버이날',
+  '스승의날',
+]);
+
 function dateRange() {
   const now = new Date();
   const fromDate = now.toISOString().slice(0, 10);
@@ -17,7 +32,10 @@ function dateRange() {
 async function run({ dryRun }) {
   const range = dateRange();
 
-  const googleEvents = await fetchKoreanHolidays(range); // Map<eventId, {title, date}>
+  const rawGoogleEvents = await fetchKoreanHolidays(range); // Map<eventId, {title, date}>
+  const googleEvents = new Map(
+    [...rawGoogleEvents].filter(([, { title }]) => !NON_STATUTORY_TITLES.has(title))
+  );
   const notionPages = await fetchExistingHolidayPages(range); // [{pageId, date, sourceEventId}]
 
   const existingDates = new Set(notionPages.map((p) => p.date));
@@ -45,7 +63,9 @@ async function run({ dryRun }) {
     if (!page.sourceEventId || page.attendees.length > 0) continue;
     if (googleEvents.has(page.sourceEventId)) continue;
 
-    console.log(`[삭제 예정] 구글에서 사라진 자동 생성 휴일 (노션 페이지 ${page.pageId})`);
+    console.log(
+      `[삭제 예정] 구글에서 사라졌거나 법정 공휴일 제외 목록에 걸린 자동 생성 휴일 (노션 페이지 ${page.pageId})`
+    );
     if (!dryRun) {
       await archivePage(page.pageId);
     }
