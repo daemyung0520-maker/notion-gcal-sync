@@ -132,27 +132,51 @@ export async function fetchExistingHolidayPages({ fromDate, toDate }) {
 
   return pages.map((page) => {
     const props = page.properties;
-    const date = props['Date']?.date?.start?.slice(0, 10) ?? null;
+    const dateStart = props['Date']?.date?.start?.slice(0, 10) ?? null;
+    // 종료일이 따로 없으면(하루짜리) 시작일과 같다고 본다 — 범위 계산을 단순화.
+    const dateEnd = props['Date']?.date?.end?.slice(0, 10) ?? dateStart;
     const sourceEventId =
       props['GCal Event ID']?.rich_text?.map((t) => t.plain_text).join('') || '';
     const attendees = (props['관계자']?.multi_select ?? []).map((o) => o.name);
-    return { pageId: page.id, date, sourceEventId, attendees };
+    const title = props['이름']?.title?.map((t) => t.plain_text).join('') || '';
+    return { pageId: page.id, title, date: dateStart, dateEnd, sourceEventId, attendees };
   });
 }
 
 // 구글 공휴일 이벤트를 노션에 새 페이지로 만든다. 관계자는 일부러 비워둔다 —
 // 채우면 기존 sync.js의 "휴일+배대명→9.기념일 등" 규칙에 걸려 구글로 다시
 // 나가버리는데, 이 캘린더는 이미 "대한민국의 휴일"로 따로 구독 중이라 중복이 됨.
-export async function createHolidayPage({ title, date, sourceEventId }) {
+// dateEnd를 넘기면(date와 다를 때만) 범위(연휴)로, 안 넘기면 하루짜리로 저장한다.
+export async function createHolidayPage({ title, date, dateEnd, sourceEventId }) {
+  const dateProperty = dateEnd && dateEnd !== date ? { start: date, end: dateEnd } : { start: date };
+
   await notionFetch('/pages', {
     method: 'POST',
     body: JSON.stringify({
       parent: { data_source_id: config.notion.dataSourceId },
       properties: {
         이름: { title: [{ text: { content: title } }] },
-        Date: { date: { start: date } },
+        Date: { date: dateProperty },
         '구분(선택)': { relation: [{ id: toDashedId(config.categoryPageIds.휴일) }] },
         'GCal Event ID': { rich_text: [{ text: { content: sourceEventId } }] },
+      },
+    }),
+  });
+}
+
+// 기존 휴일 페이지의 제목/날짜(범위)를 갱신한다. 설날/추석처럼 낱개 날짜로
+// 이미 만들어져 있던 페이지("설날" 등)를 하나의 연휴 범위("설날 연휴")로
+// 합칠 때 쓴다 — 제목도 같이 바꿔야 "설날 연휴"로 통일된다.
+export async function updateHolidayPage(pageId, { title, dateStart, dateEnd }) {
+  const dateProperty =
+    dateEnd && dateEnd !== dateStart ? { start: dateStart, end: dateEnd } : { start: dateStart };
+
+  await notionFetch(`/pages/${pageId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      properties: {
+        이름: { title: [{ text: { content: title } }] },
+        Date: { date: dateProperty },
       },
     }),
   });
