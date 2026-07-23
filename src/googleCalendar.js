@@ -7,7 +7,8 @@ function getCalendarClient() {
   return google.calendar({ version: 'v3', auth: oAuth2Client });
 }
 
-const calendar = getCalendarClient();
+// 다른 모듈(googleHolidays.js 등)에서도 같은 인증된 클라이언트를 재사용한다.
+export const calendar = getCalendarClient();
 
 // 종일(all-day) 이벤트를 생성하거나(eventId 없음) 수정한다(eventId 있음).
 // start/end는 'YYYY-MM-DD' 문자열이며, end는 이미 구글 캘린더 규칙(exclusive)에

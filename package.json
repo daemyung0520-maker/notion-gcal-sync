@@ -7,6 +7,8 @@
   "scripts": {
     "sync": "node src/index.js",
     "sync:dry-run": "node src/index.js --dry-run",
+    "import-holidays": "node src/importHolidays.js",
+    "import-holidays:dry-run": "node src/importHolidays.js --dry-run",
     "get-google-token": "node scripts/get-google-token.js"
   },
   "engines": {

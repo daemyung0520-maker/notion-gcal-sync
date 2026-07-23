@@ -86,6 +86,13 @@ export async function runSync({ dryRun }) {
 
     if (isUpdate) {
       updated++;
+      // 구분이 바뀌어 다른 캘린더로 넘어간 경우, update가 404로 실패해 내부적으로
+      // insert로 새로 생성됐을 수 있다 (googleCalendar.js의 폴백). 그 경우 이벤트
+      // ID가 바뀌므로, 실제로 바뀐 경우에만 노션에 다시 기록해서 다음 실행에서
+      // 또 새로 생성되는(중복) 일이 없게 한다.
+      if (eventId !== schedule.gcalEventId) {
+        await writeGCalEventId(schedule.pageId, eventId);
+      }
     } else {
       created++;
       await writeGCalEventId(schedule.pageId, eventId);

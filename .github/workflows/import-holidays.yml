@@ -1,0 +1,32 @@
+name: Import Korean Holidays to Notion
+
+on:
+  schedule:
+    # 매일 1회 (00:00 UTC = 오전 9시 KST)
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  import-holidays:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run import-holidays
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          CALENDAR_ID_WORK: ${{ secrets.CALENDAR_ID_WORK }}
+          CALENDAR_ID_PERSONAL: ${{ secrets.CALENDAR_ID_PERSONAL }}
+          CALENDAR_ID_DATE: ${{ secrets.CALENDAR_ID_DATE }}
+          CALENDAR_ID_ANNIVERSARY: ${{ secrets.CALENDAR_ID_ANNIVERSARY }}
+          SYNC_CUTOFF_DATE: ${{ secrets.SYNC_CUTOFF_DATE }}

@@ -89,3 +89,79 @@ export async function writeGCalEventId(pageId, eventId) {
     }),
   });
 }
+
+function toDashedId(id) {
+  return `${id.slice(0, 8)}-${id.slice(8, 12)}-${id.slice(12, 16)}-${id.slice(16, 20)}-${id.slice(20)}`;
+}
+
+// "휴일" 구분의 노션 페이지들을 fromDate~toDate 범위에서 조회한다.
+// sourceEventId는 "GCal Event ID"에 저장된 값인데, 이 필드는 두 가지 다른
+// 용도로 쓰인다: (1) 이 가져오기 기능이 적어둔 "구글 원본 휴일 이벤트 ID",
+// (2) 관계자에 배대명이 있는 휴일 페이지를 sync.js가 "9. 기념일 등"에 올릴 때
+// 적어두는 "우리가 만든 구글 이벤트 ID". 둘을 구분하지 않으면 (2)를 (1)로
+// 착각해서 잘못 삭제할 수 있으므로, attendees(관계자)도 함께 반환해서
+// 호출부에서 "관계자가 비어있을 때만 가져오기가 만든 것"으로 판단하게 한다.
+export async function fetchExistingHolidayPages({ fromDate, toDate }) {
+  const pages = [];
+  let cursor;
+
+  do {
+    const body = {
+      filter: {
+        and: [
+          {
+            property: '구분(선택)',
+            relation: { contains: toDashedId(config.categoryPageIds.휴일) },
+          },
+          { property: 'Date', date: { on_or_after: fromDate } },
+          { property: 'Date', date: { on_or_before: toDate } },
+        ],
+      },
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    };
+
+    const data = await notionFetch(`/data_sources/${config.notion.dataSourceId}/query`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    pages.push(...data.results);
+    cursor = data.has_more ? data.next_cursor : undefined;
+  } while (cursor);
+
+  return pages.map((page) => {
+    const props = page.properties;
+    const date = props['Date']?.date?.start?.slice(0, 10) ?? null;
+    const sourceEventId =
+      props['GCal Event ID']?.rich_text?.map((t) => t.plain_text).join('') || '';
+    const attendees = (props['관계자']?.multi_select ?? []).map((o) => o.name);
+    return { pageId: page.id, date, sourceEventId, attendees };
+  });
+}
+
+// 구글 공휴일 이벤트를 노션에 새 페이지로 만든다. 관계자는 일부러 비워둔다 —
+// 채우면 기존 sync.js의 "휴일+배대명→9.기념일 등" 규칙에 걸려 구글로 다시
+// 나가버리는데, 이 캘린더는 이미 "대한민국의 휴일"로 따로 구독 중이라 중복이 됨.
+export async function createHolidayPage({ title, date, sourceEventId }) {
+  await notionFetch('/pages', {
+    method: 'POST',
+    body: JSON.stringify({
+      parent: { data_source_id: config.notion.dataSourceId },
+      properties: {
+        이름: { title: [{ text: { content: title } }] },
+        Date: { date: { start: date } },
+        '구분(선택)': { relation: [{ id: toDashedId(config.categoryPageIds.휴일) }] },
+        'GCal Event ID': { rich_text: [{ text: { content: sourceEventId } }] },
+      },
+    }),
+  });
+}
+
+// 완전 삭제가 아니라 노션 휴지통으로 이동 (복구 가능).
+export async function archivePage(pageId) {
+  await notionFetch(`/pages/${pageId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ archived: true }),
+  });
+}
