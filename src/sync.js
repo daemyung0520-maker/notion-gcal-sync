@@ -1,6 +1,6 @@
 import { config } from './config.js';
 import { fetchUpcomingSchedules, writeGCalEventId } from './notion.js';
-import { upsertAllDayEvent } from './googleCalendar.js';
+import { upsertAllDayEvent, listSyncedEventIds, deleteEvent } from './googleCalendar.js';
 
 // "구분(선택)" relation의 원본 페이지 ID로 캘린더를 결정한다 (롤업 문자열 비교 X).
 function resolveCalendar({ categoryPageId, attendees }) {
@@ -35,6 +35,10 @@ export async function runSync({ dryRun }) {
   let updated = 0;
   let skipped = 0;
 
+  // 이번에 실제로 캘린더에 있어야 하는 (구분 매칭 + 날짜 있는) 노션 페이지 ID 집합.
+  // 삭제/구분변경 감지(reconcile) 단계에서 "더 이상 유효하지 않은 것"을 가리는 기준이 된다.
+  const stillValidPageIds = new Set();
+
   for (const schedule of schedules) {
     const target = resolveCalendar(schedule);
 
@@ -42,6 +46,8 @@ export async function runSync({ dryRun }) {
       skipped++;
       continue;
     }
+
+    stillValidPageIds.add(schedule.pageId);
 
     const { start, end } = toAllDayRange(schedule.date);
     const isUpdate = Boolean(schedule.gcalEventId);
@@ -71,8 +77,31 @@ export async function runSync({ dryRun }) {
     }
   }
 
+  // 삭제 반영: 노션에서 페이지가 삭제/휴지통 이동되었거나 구분이 바뀌어 더 이상
+  // 이 캘린더 대상이 아닌 경우, 예전에 만들어둔 이벤트를 찾아 지운다.
+  // (Notion API는 삭제된 페이지를 조회 결과에서 아예 빼버리므로, 반대로 구글
+  // 캘린더 쪽에서 "우리가 만든" 이벤트를 훑어 지금 유효한 페이지 목록과 비교한다.)
+  let removed = 0;
+  const timeMinISO = `${config.syncCutoffDate}T00:00:00Z`;
+  const calendarIds = new Set(Object.values(config.calendars));
+
+  for (const calendarId of calendarIds) {
+    const synced = await listSyncedEventIds(calendarId, timeMinISO);
+
+    for (const [notionPageId, eventId] of synced) {
+      if (stillValidPageIds.has(notionPageId)) continue;
+
+      console.log(`[삭제] 노션에서 사라졌거나 구분이 바뀜 → 캘린더에서 제거`);
+
+      if (!dryRun) {
+        await deleteEvent(calendarId, eventId);
+      }
+      removed++;
+    }
+  }
+
   const suffix = dryRun ? ' (dry-run: 실제로 반영하지 않았습니다)' : '';
   console.log(
-    `\n동기화 완료 — 조회 ${schedules.length}건 / 생성 ${created}건 / 수정 ${updated}건 / 제외 ${skipped}건${suffix}`
+    `\n동기화 완료 — 조회 ${schedules.length}건 / 생성 ${created}건 / 수정 ${updated}건 / 삭제 ${removed}건 / 제외 ${skipped}건${suffix}`
   );
 }
