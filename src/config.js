@@ -23,6 +23,7 @@ export const config = {
     업무: process.env.CALENDAR_ID_WORK || 'daemyung0520@gmail.com',
     개인: required('CALENDAR_ID_PERSONAL'),
     데이트: required('CALENDAR_ID_DATE'),
+    기념일: required('CALENDAR_ID_ANNIVERSARY'),
   },
   timeZone: 'Asia/Seoul',
   // "구분(선택)" relation이 가리키는 "구분 색상" 데이터소스의 실제 페이지 ID.
@@ -36,6 +37,8 @@ export const config = {
   },
   // 이 인물이 "관계자"에 포함되면 개인 일정이 데이트 캘린더로 감
   partnerTag: '세지💕',
+  // 본인. "휴일" 구분 + 이 인물이 관계자면 기념일 캘린더로 감 (연차, 공휴일 등)
+  selfTag: '배대명',
   // 이 날짜(YYYY-MM-DD) 이후의 Date 속성을 가진 일정만 동기화 대상
   syncCutoffDate: required('SYNC_CUTOFF_DATE'),
 };

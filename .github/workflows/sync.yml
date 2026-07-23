@@ -28,4 +28,5 @@ jobs:
           CALENDAR_ID_WORK: ${{ secrets.CALENDAR_ID_WORK }}
           CALENDAR_ID_PERSONAL: ${{ secrets.CALENDAR_ID_PERSONAL }}
           CALENDAR_ID_DATE: ${{ secrets.CALENDAR_ID_DATE }}
+          CALENDAR_ID_ANNIVERSARY: ${{ secrets.CALENDAR_ID_ANNIVERSARY }}
           SYNC_CUTOFF_DATE: ${{ secrets.SYNC_CUTOFF_DATE }}

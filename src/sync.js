@@ -13,14 +13,19 @@ function resolveCalendar({ categoryPageId, attendees }) {
     }
     return { calendarId: config.calendars.개인, label: '2. 개인' };
   }
-  // 자기개발 / 휴일 / 알 수 없는 구분 → 동기화 제외
+  if (categoryPageId === config.categoryPageIds.휴일 && attendees.includes(config.selfTag)) {
+    return { calendarId: config.calendars.기념일, label: '9. 기념일 등' };
+  }
+  // 자기개발 / (배대명이 아닌) 휴일 / 알 수 없는 구분 → 동기화 제외
   return null;
 }
 
 // 캘린더에 실제로 올라갈 제목. "개인"/"데이트"로 가는 일정만, 페이지 아이콘이
-// 이모지로 설정되어 있으면 제목 앞에 "이모지 + 공백 1개"로 붙인다. "업무"는 대상 아님.
+// 이모지로 설정되어 있으면 제목 앞에 "이모지 + 공백 1개"로 붙인다.
+const ICON_PREFIX_LABELS = new Set(['2. 개인', '3. 데이트']);
+
 function buildSummary(schedule, target) {
-  if (target.label !== '1. 업무' && schedule.icon) {
+  if (ICON_PREFIX_LABELS.has(target.label) && schedule.icon) {
     return `${schedule.icon} ${schedule.title}`;
   }
   return schedule.title;
