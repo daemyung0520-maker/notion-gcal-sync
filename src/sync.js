@@ -17,6 +17,15 @@ function resolveCalendar({ categoryPageId, attendees }) {
   return null;
 }
 
+// 캘린더에 실제로 올라갈 제목. "개인"/"데이트"로 가는 일정만, 페이지 아이콘이
+// 이모지로 설정되어 있으면 제목 앞에 "이모지 + 공백 1개"로 붙인다. "업무"는 대상 아님.
+function buildSummary(schedule, target) {
+  if (target.label !== '1. 업무' && schedule.icon) {
+    return `${schedule.icon} ${schedule.title}`;
+  }
+  return schedule.title;
+}
+
 // 구글 캘린더는 종일 이벤트의 종료일을 exclusive로 처리하므로,
 // 노션 Date의 종료일(없으면 시작일)에 +1일 해서 넘겨야 한다.
 function toAllDayRange(dateProp) {
@@ -51,9 +60,10 @@ export async function runSync({ dryRun }) {
 
     const { start, end } = toAllDayRange(schedule.date);
     const isUpdate = Boolean(schedule.gcalEventId);
+    const summary = buildSummary(schedule, target);
 
     console.log(
-      `${isUpdate ? '[수정]' : '[생성]'} "${schedule.title}" (${start} ~ ${end}) → ${target.label} 캘린더`
+      `${isUpdate ? '[수정]' : '[생성]'} "${summary}" (${start} ~ ${end}) → ${target.label} 캘린더`
     );
 
     if (dryRun) {
@@ -63,7 +73,7 @@ export async function runSync({ dryRun }) {
     const eventId = await upsertAllDayEvent({
       calendarId: target.calendarId,
       eventId: schedule.gcalEventId || null,
-      summary: schedule.title,
+      summary,
       start,
       end,
       notionPageId: schedule.pageId,

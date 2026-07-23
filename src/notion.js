@@ -40,7 +40,11 @@ function parseSchedulePage(page) {
   const gcalEventId =
     props['GCal Event ID']?.rich_text?.map((t) => t.plain_text).join('') || '';
 
-  return { pageId: page.id, title, date, attendees, categoryPageId, gcalEventId };
+  // 페이지 상단 아이콘. 이모지인 경우만 쓸 수 있고, 업로드 이미지/외부 URL
+  // 아이콘은 캘린더 제목에 넣을 수 없으니 무시한다.
+  const icon = page.icon?.type === 'emoji' ? page.icon.emoji : null;
+
+  return { pageId: page.id, title, date, attendees, categoryPageId, gcalEventId, icon };
 }
 
 // 기준일(config.syncCutoffDate) 이후 Date를 가진 일정만 조회한다.
