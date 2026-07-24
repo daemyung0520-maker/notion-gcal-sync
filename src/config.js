@@ -8,6 +8,17 @@ function required(name) {
   return value;
 }
 
+// 이 값(일수) 이전의 일정은 동기화 대상에서 제외한다. 고정 날짜가 아니라
+// 실행 시점("오늘") 기준으로 매번 계산되므로, 시간이 지나도 조회 범위가
+// 무한정 늘어나지 않고 항상 "최근 N일 전 ~ 미래 전체"로 유지된다.
+const SYNC_CUTOFF_DAYS_AGO = 30;
+
+function computeSyncCutoffDate() {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - SYNC_CUTOFF_DAYS_AGO);
+  return d.toISOString().slice(0, 10);
+}
+
 export const config = {
   notion: {
     token: required('NOTION_TOKEN'),
@@ -39,6 +50,6 @@ export const config = {
   partnerTag: '세지💕',
   // 본인. "휴일" 구분 + 이 인물이 관계자면 기념일 캘린더로 감 (연차, 공휴일 등)
   selfTag: '배대명',
-  // 이 날짜(YYYY-MM-DD) 이후의 Date 속성을 가진 일정만 동기화 대상
-  syncCutoffDate: required('SYNC_CUTOFF_DATE'),
+  // 이 날짜(YYYY-MM-DD) 이후의 Date 속성을 가진 일정만 동기화 대상 (매 실행마다 재계산)
+  syncCutoffDate: computeSyncCutoffDate(),
 };

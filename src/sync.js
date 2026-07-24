@@ -2,8 +2,12 @@ import { config } from './config.js';
 import { fetchUpcomingSchedules, writeGCalEventId } from './notion.js';
 import { upsertAllDayEvent, listSyncedEventIds, deleteEvent } from './googleCalendar.js';
 
+// 알려진 카테고리 ID 목록. resolveCalendar에서 "의도된 제외"(자기개발 등)와
+// "알 수 없는 구분"(설정이 바뀌었거나 연동 권한이 빠진 경우)을 구분하는 데 쓴다.
+const KNOWN_CATEGORY_IDS = new Set(Object.values(config.categoryPageIds));
+
 // "구분(선택)" relation의 원본 페이지 ID로 캘린더를 결정한다 (롤업 문자열 비교 X).
-function resolveCalendar({ categoryPageId, attendees }) {
+function resolveCalendar({ pageId, title, categoryPageId, attendees }) {
   if (categoryPageId === config.categoryPageIds.업무) {
     return { calendarId: config.calendars.업무, label: '1. 업무' };
   }
@@ -15,6 +19,15 @@ function resolveCalendar({ categoryPageId, attendees }) {
   }
   if (categoryPageId === config.categoryPageIds.휴일 && attendees.includes(config.selfTag)) {
     return { calendarId: config.calendars.기념일, label: '9. 기념일 등' };
+  }
+  // categoryPageId가 아예 알려진 카테고리 중 하나도 아니면(설정값이 바뀌었거나,
+  // 노션 통합 권한이 빠져 relation이 비어 보이는 경우 등) 조용히 넘어가지 않고
+  // 로그에 남겨서 눈에 띄게 한다. 자기개발 / (배대명이 아닌) 휴일처럼 "알고 있는
+  // 카테고리인데 의도적으로 제외"하는 정상 케이스는 경고하지 않는다.
+  if (!KNOWN_CATEGORY_IDS.has(categoryPageId)) {
+    console.warn(
+      `[경고] "${title}" 의 "구분(선택)" 값을 인식할 수 없습니다 (categoryPageId=${categoryPageId ?? '없음'}). 노션 카테고리 설정이 바뀌었거나 통합 권한이 빠졌을 수 있습니다. (페이지 ID: ${pageId})`
+    );
   }
   // 자기개발 / (배대명이 아닌) 휴일 / 알 수 없는 구분 → 동기화 제외
   return null;
