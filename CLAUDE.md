@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Two independent one-shot Node.js scripts, both triggered on a schedule by GitHub Actions rather than run as long-lived processes:
 
-- **`src/index.js`** — syncs schedule entries from a specific Notion database ("대명 창고" / Schedule) to specific Google Calendars, based on a category field. Runs every 5 minutes (`.github/workflows/sync.yml`).
+- **`src/index.js`** — syncs schedule entries from a specific Notion database ("대명 창고" / Schedule) to specific Google Calendars, based on a category field. Runs every 15 minutes (`.github/workflows/sync.yml`) — widened from 5 minutes because GitHub throttles/delays very frequent schedule triggers more heavily.
 - **`src/importHolidays.js`** — imports Korean public holidays from Google's built-in "대한민국의 휴일" calendar into the same Notion database, in the opposite direction. Runs once a day (`.github/workflows/import-holidays.yml`).
 
 These two flows are deliberately kept from feeding back into each other in a loop — see "Notion data model gotchas" below.

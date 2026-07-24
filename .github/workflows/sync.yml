@@ -2,9 +2,15 @@ name: Notion -> Google Calendar Sync
 
 on:
   schedule:
-    # 5분마다 실행 (GitHub 스케줄 최소 간격. 정확히 그 분에 안 돌 수 있고 다소 지연될 수 있음)
-    - cron: '*/5 * * * *'
+    # 15분마다 실행 (5분 간격은 GitHub이 더 심하게 지연/스로틀링하는 경향이 있어 완화 목적으로 조정)
+    - cron: '*/15 * * * *'
   workflow_dispatch: {}
+
+# 이전 실행이 아직 끝나지 않았으면 새 실행은 취소하지 않고 대기시킨다.
+# (동시에 두 실행이 같은 노션 일정을 처리하면서 캘린더 이벤트가 중복 생성되는 것을 방지)
+concurrency:
+  group: sync
+  cancel-in-progress: false
 
 jobs:
   sync:
